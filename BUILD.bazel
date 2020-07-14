@@ -594,9 +594,6 @@ cc_library(
         ],
     ),
     copts = COPTS,
-    includes = [
-        "src",
-    ],
     linkopts = select({
         "@bazel_tools//src/conditions:windows": [
         ],
