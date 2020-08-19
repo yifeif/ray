@@ -194,6 +194,7 @@ class RemoteFunction:
             self._num_cpus, self._num_gpus, self._memory,
             self._object_store_memory, self._resources, num_cpus, num_gpus,
             memory, object_store_memory, resources)
+        print(resources)
 
         def invocation(args, kwargs):
             if self._is_cross_language:

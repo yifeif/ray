@@ -350,5 +350,44 @@ def test_cuda_visible_devices(ray_start_cluster):
     assert devices == "0", devices
 
 
+def test_placement_group_wait(ray_start_cluster):
+    cluster = ray_start_cluster
+    num_nodes = 1
+    for _ in range(num_nodes):
+        cluster.add_node(num_cpus=4, num_gpus=0)
+    ray.init(address=cluster.address)
+    cluster.wait_for_nodes()
+
+    name = "name"
+    strategy = "PACK"
+    bundles = [{"CPU": 2, "GPU": 1}, {"CPU": 2, "GPU": 1}]
+
+    @ray.remote(num_cpus=0)
+    def random_task(i):
+        return i
+
+    object_refs = []
+    # This should not be scheduled because there's no gpu node.
+    pid = ray.experimental.placement_group(
+        name=name, strategy=strategy, bundles=bundles)
+    NUM_RANDOM_TASKS = 3
+    object_refs.append(pid)
+    object_refs += [random_task.remote(i) for i in range(NUM_RANDOM_TASKS)]
+    # Placement group should be unready.
+    ready, unready = ray.wait(object_refs, num_returns=NUM_RANDOM_TASKS)
+    print(ray.experimental.placement_group_table(pid))
+    print(ready)
+    assert ready == object_refs[1:]
+    assert unready == [pid]
+
+    # Add a GPU node.
+    cluster.add_node(num_cpus=4, num_gpus=2)
+    cluster.wait_for_nodes()
+    ready, unready = ray.wait(object_refs, num_returns=NUM_RANDOM_TASKS + 1)
+    # Now, placement group should be ready.
+    assert ready == object_refs
+    assert len(unready) == 0
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main(["-v", __file__]))

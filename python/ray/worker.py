@@ -31,12 +31,9 @@ import setproctitle
 import ray.signature
 import ray.state
 
-from ray import (
-    ActorID,
-    JobID,
-    ObjectRef,
-    Language,
-)
+from typing import Dict
+
+from ray import (ActorID, JobID, ObjectRef, Language, PlacementGroupID)
 from ray import import_thread
 from ray import profiling
 
@@ -1658,11 +1655,17 @@ def wait(object_refs, num_returns=1, timeout=None):
                          "Received {}".format(timeout))
 
     for object_ref in object_refs:
+        if isinstance(object_ref, PlacementGroupID):
+            continue
+        # TODO(sang): Update the error message once placement group stabilizes.
         if not isinstance(object_ref, ObjectRef):
             raise TypeError("wait() expected a list of ray.ObjectRef, "
                             "got list containing {}".format(type(object_ref)))
 
     worker.check_connected()
+    pg_wait_manager = PlacementGroupWaitManager()
+    pg_wait_manager.update_object_refs(object_refs)
+    print(object_refs)
     # TODO(swang): Check main thread.
     with profiling.profile("ray.wait"):
 
@@ -1689,6 +1692,11 @@ def wait(object_refs, num_returns=1, timeout=None):
             timeout_milliseconds,
             worker.current_task_id,
         )
+        print(ready_ids)
+        print(remaining_ids)
+        pg_wait_manager.recover_pg_refs(ready_ids, remaining_ids)
+        print(ready_ids)
+        print(remaining_ids)
         return ready_ids, remaining_ids
 
 
@@ -1980,3 +1988,44 @@ def remote(*args, **kwargs):
         max_task_retries=max_task_retries,
         max_retries=max_retries,
         worker=worker)
+
+
+@remote(num_cpus=0)
+def pg_creation_wait_tasks(placement_group_ref):
+    # TODO(sang): Run sub tasks on all bundles and ray.get on it.
+    # It is currently not possible because
+    # we cannot get number of bundles for placement group.
+    return placement_group_ref
+
+
+class PlacementGroupWaitManager:
+    """NOTE: This class shouldn't be used elsewhere other than ray.wait"""
+
+    def __init__(self):
+        self.object_ref_pg_mapping: Dict[ObjectRef, PlacementGroupID] = {}
+
+    def update_object_refs(self, object_refs):
+        """Update the placement group reference to object ref."""
+        for i, placement_group_ref in enumerate(object_refs):
+            if isinstance(placement_group_ref, PlacementGroupID):
+                pg_ref = object_refs[i]
+                corresponding_object_ref = pg_creation_wait_tasks.options(
+                    placement_group_id=placement_group_ref,
+                    placement_group_bundle_index=-1).remote(
+                        placement_group_ref)
+                self.object_ref_pg_mapping[
+                    corresponding_object_ref.binary()] = pg_ref
+                object_refs[i] = corresponding_object_ref
+
+    def recover_pg_refs(self, ready_refs, unready_refs):
+        """Recover the placement group ref from object ref."""
+        # Update ready list.
+        for i, object_ref in enumerate(ready_refs):
+            object_id = object_ref.binary()
+            if object_id in self.object_ref_pg_mapping:
+                ready_refs[i] = self.object_ref_pg_mapping[object_id]
+        # Update unready list.
+        for i, object_ref in enumerate(unready_refs):
+            object_id = object_ref.binary()
+            if object_id in self.object_ref_pg_mapping:
+                unready_refs[i] = self.object_ref_pg_mapping[object_id]

@@ -1,8 +1,7 @@
 from typing import (List, Dict)
 
 import ray
-from ray._raylet import (
-    PlacementGroupID, )
+from ray._raylet import PlacementGroupID
 
 
 def placement_group(bundles: List[Dict[str, float]],
@@ -43,7 +42,7 @@ def remove_placement_group(placement_group_id: PlacementGroupID):
     worker.core_worker.remove_placement_group(placement_group_id)
 
 
-def placement_group_table(placement_group_id):
+def placement_group_table(placement_group_id: PlacementGroupID):
     assert placement_group_id is not None
     worker = ray.worker.global_worker
     worker.check_connected()
