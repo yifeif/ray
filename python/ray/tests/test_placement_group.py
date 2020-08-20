@@ -186,8 +186,7 @@ def test_placement_group_task_resource_ids(ray_start_cluster):
     assert "CPU_group_0_" not in list(resources.keys())[0], resources
 
     # Now retry with a bundle index constraint.
-    o1 = f.options(
-        placement_group=g1, placement_group_bundle_index=0).remote()
+    o1 = f.options(placement_group=g1, placement_group_bundle_index=0).remote()
     resources = ray.get(o1)
     assert len(resources) == 2, resources
     keys = list(resources.keys())
@@ -232,7 +231,11 @@ def test_remove_placement_group(ray_start_cluster):
 
     # Creating a placement group as soon as it is
     # created should work.
-    placement_group = ray.experimental.placement_group([{"CPU": 2}, {"CPU": 2}])
+    placement_group = ray.experimental.placement_group([{
+        "CPU": 2
+    }, {
+        "CPU": 2
+    }])
     ray.experimental.remove_placement_group(placement_group.id)
 
     def is_placement_group_removed():
@@ -244,7 +247,11 @@ def test_remove_placement_group(ray_start_cluster):
     wait_for_condition(is_placement_group_removed)
 
     # # Now let's create a placement group.
-    placement_group = ray.experimental.placement_group([{"CPU": 2}, {"CPU": 2}])
+    placement_group = ray.experimental.placement_group([{
+        "CPU": 2
+    }, {
+        "CPU": 2
+    }])
 
     # # This is a hack to wait for placement group creation.
     # # TODO(sang): Remove it when wait is implemented.
@@ -442,15 +449,17 @@ def test_check_bundle_index(ray_start_cluster):
 
     error_count = 0
     try:
-        Actor.options(placement_group=placement_group,
-                      placement_group_bundle_index=3).remote()
+        Actor.options(
+            placement_group=placement_group,
+            placement_group_bundle_index=3).remote()
     except ValueError:
         error_count = error_count + 1
     assert error_count == 1
 
     try:
-        Actor.options(placement_group=placement_group,
-                      placement_group_bundle_index=-2).remote()
+        Actor.options(
+            placement_group=placement_group,
+            placement_group_bundle_index=-2).remote()
     except ValueError:
         error_count = error_count + 1
     assert error_count == 2
