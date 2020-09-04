@@ -365,7 +365,7 @@ def resources_from_resource_arguments(
     elif default_num_gpus is not None:
         resources["GPU"] = default_num_gpus
 
-    memory = default_memory or runtime_memory
+    memory = runtime_memory or default_memory
     object_store_memory = (default_object_store_memory
                            or runtime_object_store_memory)
     if memory is not None:

@@ -7,12 +7,14 @@ import time
 import numpy as np
 import pytest
 
+from collections import namedtuple
 from unittest.mock import MagicMock, patch
 
 import ray
 import ray.cluster_utils
 import ray.test_utils
 from ray.exceptions import GetTimeoutError
+from ray.ray_constants import MEMORY_RESOURCE_UNIT_BYTES
 
 logger = logging.getLogger(__name__)
 
@@ -623,6 +625,30 @@ def test_duplicate_args(ray_start_regular_shared):
     ray.get(
         f.remote(
             arg1, arg2, arg1, kwarg1=arg1, kwarg2=arg2, kwarg1_duplicate=arg1))
+
+
+def test_ray_options_override(ray_start_regular_shared):
+    MemorySummary = namedtuple("MemorySummary",
+                               ["cluster_memory", "available_memory"])
+
+    no_override_memory_chunk = 10
+    override_memory_chunk = 11
+
+    # 50 MB
+    @ray.remote(memory=MEMORY_RESOURCE_UNIT_BYTES * no_override_memory_chunk)
+    def foo():
+        return MemorySummary(
+            cluster_memory=ray.cluster_resources()["memory"],
+            available_memory=ray.available_resources()["memory"])
+
+    no_override = ray.get(foo.remote())
+    override = ray.get(
+        foo.options(memory=MEMORY_RESOURCE_UNIT_BYTES *
+                    override_memory_chunk).remote())
+
+    assert override.cluster_memory == no_override.cluster_memory
+    assert ((override.available_memory - no_override.available_memory) == (
+        no_override_memory_chunk - override_memory_chunk))
 
 
 def test_get_correct_node_ip():
