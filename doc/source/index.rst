@@ -205,7 +205,6 @@ Papers
    walkthrough.rst
    using-ray.rst
    configure.rst
-   ray-dashboard.rst
    Tutorial and Examples <auto_examples/overview.rst>
    package-ref.rst
 

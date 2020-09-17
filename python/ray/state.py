@@ -407,15 +407,8 @@ class GlobalState:
         def get_strategy(strategy):
             if strategy == PlacementStrategy.PACK:
                 return "PACK"
-            elif strategy == PlacementStrategy.STRICT_PACK:
-                return "STRICT_PACK"
-            elif strategy == PlacementStrategy.STRICT_SPREAD:
-                return "STRICT_SPREAD"
-            elif strategy == PlacementStrategy.SPREAD:
-                return "SPREAD"
             else:
-                raise ValueError(
-                    f"Invalid strategy returned: {PlacementStrategy}")
+                return "SPREAD"
 
         assert placement_group_info is not None
         return {
