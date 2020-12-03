@@ -335,7 +335,8 @@ void ObjectManager::SendPullRequest(
   rpc::PullRequest pull_request;
   pull_request.set_object_id(object_id.Binary());
   pull_request.set_node_id(self_node_id_.Binary());
-
+  RAY_LOG(INFO) << "X-RAY-TRACE message:'PULL_REQUEST.' from_node_id:" << self_node_id_
+                << " to_node_id:" << node_id << " object_id:" << object_id;
   rpc_client->Pull(pull_request, [object_id, node_id](const Status &status,
                                                       const rpc::PullReply &reply) {
     if (!status.ok()) {
@@ -521,6 +522,9 @@ void ObjectManager::SendObjectChunk(const UniqueID &push_id, const ObjectID &obj
         HandleSendFinished(object_id, node_id, chunk_index, start_time, end_time, status);
         on_complete(status);
       };
+  RAY_LOG(INFO) << "X-RAY-TRACE message:'PUSH_REQUEST.' from_node_id:" << self_node_id_
+                << " to_node_id:" << node_id << " object_id:" << object_id
+                << " size_in_bytes:" << chunk_info.buffer_length;
   rpc_client->Push(push_request, callback);
 
   // Do this regardless of whether it failed or succeeded.

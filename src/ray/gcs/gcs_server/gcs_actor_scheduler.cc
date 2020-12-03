@@ -212,6 +212,8 @@ void GcsActorScheduler::LeaseWorkerFromNode(std::shared_ptr<GcsActor> actor,
   // Actor leases should be sent to the raylet immediately, so we should never build up a
   // backlog in GCS.
   int backlog_size = report_worker_backlog_ ? 0 : -1;
+  RAY_LOG(INFO) << "X-RAY-TRACE message:'SUBMIT_ACTOR_LEASE_REQUEST.' actor_id:"
+                << actor->GetActorID();
   lease_client->RequestWorkerLease(
       actor->GetCreationTaskSpecification(),
       [this, node_id, actor, node](const Status &status,
@@ -371,6 +373,11 @@ void GcsActorScheduler::CreateActorOnWorker(std::shared_ptr<GcsActor> actor,
                             << " on worker " << worker->GetWorkerID() << " at node "
                             << actor->GetNodeID()
                             << ", job id = " << actor->GetActorID().JobId();
+              RAY_LOG(INFO) << "X-RAY-TRACE message:'PUSH_ACTOR_CREATION.' actor_id:"
+                            << actor->GetActorID()
+                            << " job_id:" << actor->GetActorID().JobId()
+                            << " node_id:" << actor->GetNodeID()
+                            << " worker_id:" << worker->GetWorkerID();
               schedule_success_handler_(actor);
             } else {
               RetryCreatingActorOnWorker(actor, worker);

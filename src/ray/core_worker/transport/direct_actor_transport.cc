@@ -295,6 +295,10 @@ void CoreWorkerDirectActorTaskSubmitter::PushActorTask(const ClientQueue &queue,
                  << " actor counter " << actor_counter << " seq no "
                  << request->sequence_number();
   rpc::Address addr(queue.rpc_client->Addr());
+  RAY_LOG(INFO) << "X-RAY-TRACE message:'PUSH_ACTOR_TASK.' actor_id:" << actor_id
+                << " job_id:" << actor_id.JobId() << " task_id:" << task_id
+                << " address:" << addr.ip_address() << " port:" << addr.port()
+                << " worker_id:" << ray::WorkerID::FromBinary(addr.worker_id());
   queue.rpc_client->PushActorTask(
       std::move(request), skip_queue,
       [this, addr, task_id, actor_id, actor_counter, task_spec, task_skipped](

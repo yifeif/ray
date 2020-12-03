@@ -374,6 +374,7 @@ cdef execute_task(
     if <int>task_type == <int>TASK_TYPE_NORMAL_TASK:
         next_title = "ray::IDLE"
         function_executor = execution_info.function
+        # print("X-RAY-TRACE message:''")
     else:
         actor = worker.actors[core_worker.get_actor_id()]
         class_name = actor.__class__.__name__

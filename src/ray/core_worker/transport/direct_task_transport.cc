@@ -286,6 +286,9 @@ void CoreWorkerDirectTaskSubmitter::RequestNewWorkerIfNeeded(
   TaskID task_id = resource_spec.TaskId();
   // Subtract 1 so we don't double count the task we are requesting for.
   int64_t queue_size = task_queue.size() - 1;
+  RAY_LOG(INFO) << "X-RAY-TRACE message:'SUBMIT_LEASE_REQUEST.' task_id:"
+                << resource_spec.TaskId() << " job_id:" << resource_spec.JobId()
+                << " is_driver_task:" << resource_spec.IsDriverTask();
   lease_client->RequestWorkerLease(
       resource_spec,
       [this, scheduling_key](const Status &status,
@@ -355,6 +358,9 @@ void CoreWorkerDirectTaskSubmitter::PushNormalTask(
   request->mutable_task_spec()->CopyFrom(task_spec.GetMessage());
   request->mutable_resource_mapping()->CopyFrom(assigned_resources);
   request->set_intended_worker_id(addr.worker_id.Binary());
+  RAY_LOG(INFO) << "X-RAY-TRACE message:'PUSH_NORMAL_TASK.' task_id:"
+                << task_spec.TaskId() << " job_id:" << task_spec.JobId()
+                << " is_driver_task:" << task_spec.IsDriverTask();
   client.PushNormalTask(std::move(request), [this, task_id, is_actor, is_actor_creation,
                                              scheduling_key, addr, assigned_resources](
                                                 Status status,

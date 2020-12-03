@@ -170,6 +170,9 @@ NodeManager::NodeManager(boost::asio::io_service &io_service, const NodeID &self
       report_worker_backlog_(RayConfig::instance().report_worker_backlog()),
       record_metrics_period_(config.record_metrics_period_ms) {
   RAY_LOG(INFO) << "Initializing NodeManager with ID " << self_node_id_;
+  RAY_LOG(INFO) << "X-RAY-TRACE message:'RAYLET_REGISTERED.' node_id:" << self_node_id_
+                << " port:" << config.node_manager_port
+                << " address:" << config.node_manager_address;
   RAY_CHECK(heartbeat_period_.count() > 0);
   // Initialize the resource map with own cluster resource configuration.
   cluster_resource_map_.emplace(self_node_id_,
@@ -742,7 +745,9 @@ void NodeManager::NodeRemoved(const GcsNodeInfo &node_info) {
   // exit immediately.
   const NodeID node_id = NodeID::FromBinary(node_info.node_id());
   RAY_LOG(DEBUG) << "[NodeRemoved] Received callback from node id " << node_id;
-
+  RAY_LOG(INFO) << "X-RAY-TRACE message:'RAYLET_DEAD.' node_id:" << self_node_id_
+                << " port:" << node_info.node_manager_port()
+                << " address:" << node_info.node_manager_address();
   RAY_CHECK(node_id != self_node_id_)
       << "Exiting because this node manager has mistakenly been marked dead by the "
       << "monitor: GCS didn't receive heartbeats within timeout "
@@ -1239,6 +1244,12 @@ void NodeManager::ProcessRegisterClientRequestMessage(
       // maximum_startup_concurrency).
       DispatchTasks(local_queues_.GetReadyTasksByClass());
     }
+    if (worker_type == rpc::WorkerType::WORKER) {
+      RAY_LOG(INFO) << "X-RAY-TRACE message:'WORKER_REGISTERED.' worker_id:"
+                    << worker->WorkerId() << " task_id:" << worker->GetAssignedTaskId()
+                    << " actor_id:" << worker->GetActorId()
+                    << " job_id:" << worker->GetAssignedJobId();
+    }
   } else {
     // Register the new driver.
     RAY_CHECK(pid >= 0);
@@ -1255,6 +1266,9 @@ void NodeManager::ProcessRegisterClientRequestMessage(
           gcs::CreateJobTableData(job_id, /*is_dead*/ false, std::time(nullptr),
                                   worker_ip_address, pid, job_config);
       RAY_CHECK_OK(gcs_client_->Jobs().AsyncAdd(job_data_ptr, nullptr));
+      RAY_LOG(INFO) << "X-RAY-TRACE message:'DRIVER_REGISTERED.' worker_id:"
+                    << worker->WorkerId() << " task_id:" << worker->GetAssignedTaskId()
+                    << " job_id:" << worker->GetAssignedJobId();
     }
   }
 }
@@ -1371,6 +1385,13 @@ void NodeManager::ProcessDisconnectClientMessage(
                                    worker->Port(), time(nullptr), intentional_disconnect);
   RAY_CHECK_OK(
       gcs_client_->Workers().AsyncReportWorkerFailure(worker_failure_data_ptr, nullptr));
+  if (is_worker) {
+    RAY_LOG(INFO) << "X-RAY-TRACE message:'WORKER_DEAD.' worker_id:" << worker->WorkerId()
+                  << " job_id:" << worker->GetAssignedJobId();
+  } else if (is_driver) {
+    RAY_LOG(INFO) << "X-RAY-TRACE message:'DRIVER_DEAD.' worker_id:" << worker->WorkerId()
+                  << " job_id:" << worker->GetAssignedJobId();
+  }
 
   if (is_worker) {
     const ActorID &actor_id = worker->GetActorId();
@@ -1684,18 +1705,26 @@ void NodeManager::HandleRequestWorkerLease(const rpc::RequestWorkerLeaseRequest 
             << "Worker is already leased out " << worker_id;
 
         auto worker = std::static_pointer_cast<Worker>(granted);
+        RAY_LOG(INFO) << "X-RAY-TRACE message:'LEASE_GRANTED.' node_id:" << self_node_id_
+                      << " worker_id:" << worker->WorkerId()
+                      << " task_id:" << worker->GetAssignedTaskId()
+                      << " actor_id:" << worker->GetActorId()
+                      << " job_id:" << worker->GetAssignedJobId() << " owner_worker_id:"
+                      << WorkerID::FromBinary(owner_address.worker_id());
         leased_workers_[worker_id] = worker;
       });
-  task.OnSpillbackInstead(
-      [this, reply, task_id, send_reply_callback](const NodeID &spillback_to,
-                                                  const std::string &address, int port) {
-        RAY_LOG(DEBUG) << "Worker lease request SPILLBACK " << task_id;
-        reply->mutable_retry_at_raylet_address()->set_ip_address(address);
-        reply->mutable_retry_at_raylet_address()->set_port(port);
-        reply->mutable_retry_at_raylet_address()->set_raylet_id(spillback_to.Binary());
-        metrics_num_task_spilled_back_ += 1;
-        send_reply_callback(Status::OK(), nullptr, nullptr);
-      });
+  task.OnSpillbackInstead([this, reply, task_id, send_reply_callback](
+                              const NodeID &spillback_to, const std::string &address,
+                              int port) {
+    RAY_LOG(DEBUG) << "Worker lease request SPILLBACK " << task_id;
+    reply->mutable_retry_at_raylet_address()->set_ip_address(address);
+    reply->mutable_retry_at_raylet_address()->set_port(port);
+    reply->mutable_retry_at_raylet_address()->set_raylet_id(spillback_to.Binary());
+    metrics_num_task_spilled_back_ += 1;
+    RAY_LOG(INFO) << "X-RAY-TRACE message:'SPILLBACK.' from_node_id:" << self_node_id_
+                  << " to_node_id:" << spillback_to.Binary() << " task_id:" << task_id;
+    send_reply_callback(Status::OK(), nullptr, nullptr);
+  });
   task.OnCancellationInstead([reply, task_id, send_reply_callback]() {
     RAY_LOG(DEBUG) << "Task lease request canceled " << task_id;
     reply->set_canceled(true);
