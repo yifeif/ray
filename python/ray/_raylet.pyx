@@ -374,11 +374,28 @@ cdef execute_task(
     if <int>task_type == <int>TASK_TYPE_NORMAL_TASK:
         next_title = "ray::IDLE"
         function_executor = execution_info.function
-        # print("X-RAY-TRACE message:''")
+        logger.info(
+            f"X-RAY-TRACE message:'NORMAL_TASK_EXECUTED' title:{next_title}"
+            f" job_id:{job_id.hex().encode('ascii')}"
+            f" task_id:{task_id.hex().encode('ascii')}")
     else:
         actor = worker.actors[core_worker.get_actor_id()]
         class_name = actor.__class__.__name__
         next_title = f"ray::{class_name}"
+        if <int>task_type == <int>TASK_TYPE_ACTOR_CREATION_TASK:
+            logger.info(
+                f"X-RAY-TRACE message:'ACTOR_CREATION_TASK_EXECUTED'"
+                f" title:{next_title}"
+                f" job_id:{job_id.hex().encode('ascii')}"
+                f" task_id:{task_id.hex().encode('ascii')}"
+                f" actor_id:{core_worker.get_actor_id().hex().encode('ascii')}")
+        else:
+            logger.info(
+                f"X-RAY-TRACE message:'ACTOR_TASK_EXECUTED'"
+                f" title:{next_title}"
+                f" job_id:{job_id.hex().encode('ascii')}"
+                f" task_id:{task_id.hex().encode('ascii')}"
+                f" actor_id:{core_worker.get_actor_id().hex().encode('ascii')}")
         pid = os.getpid()
         worker_name = f"ray_{class_name}_{pid}"
         if c_resources.find(b"object_store_memory") != c_resources.end():
