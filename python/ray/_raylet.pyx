@@ -376,6 +376,7 @@ cdef execute_task(
         function_executor = execution_info.function
         logger.info(
             f"X-RAY-TRACE message:'NORMAL_TASK_EXECUTED' title:{next_title}"
+            f" task_name:{task_name}"
             f" job_id:{job_id.hex().encode('ascii')}"
             f" task_id:{task_id.hex().encode('ascii')}")
     else:
@@ -386,6 +387,7 @@ cdef execute_task(
             logger.info(
                 f"X-RAY-TRACE message:'ACTOR_CREATION_TASK_EXECUTED'"
                 f" title:{next_title}"
+                f" task_name:{task_name}"
                 f" job_id:{job_id.hex().encode('ascii')}"
                 f" task_id:{task_id.hex().encode('ascii')}"
                 f" actor_id:{core_worker.get_actor_id().hex().encode('ascii')}") # noqa 
@@ -393,6 +395,7 @@ cdef execute_task(
             logger.info(
                 f"X-RAY-TRACE message:'ACTOR_TASK_EXECUTED'"
                 f" title:{next_title}"
+                f" task_name:{task_name}"
                 f" job_id:{job_id.hex().encode('ascii')}"
                 f" task_id:{task_id.hex().encode('ascii')}"
                 f" actor_id:{core_worker.get_actor_id().hex().encode('ascii')}") # noqa 

@@ -6,18 +6,22 @@ import logging
 import time
 
 import ray
+from ray.cluster_utils import Cluster
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-ray.init(address="auto")
-
 # These numbers need to correspond with the autoscaler config file.
 # The number of remote nodes in the autoscaler should upper bound
 # these because sometimes nodes fail to update.
-num_remote_nodes = 100
-head_node_cpus = 2
+num_remote_nodes = 5
+head_node_cpus = 4
 num_remote_cpus = num_remote_nodes * head_node_cpus
+
+cluster = Cluster()
+for _ in range(num_remote_cpus + 1):
+    cluster.add_node(num_cpus=head_node_cpus, num_gpus=1)
+ray.init(address=cluster.address)
 
 # Wait until the expected number of nodes have joined the cluster.
 while True:
@@ -51,7 +55,7 @@ logger.info("Submitting many tasks with large returns.")
 for i in range(10):
     iteration_start = time.time()
     logger.info("Iteration %s", i)
-    ray.get([f.remote(1000000) for _ in range(1000)])
+    ray.get([f.remote(1000000) for _ in range(100)])
     stage_0_iterations.append(time.time() - iteration_start)
 
 stage_0_time = time.time() - start_time
@@ -64,7 +68,7 @@ logger.info("Submitting many tasks.")
 for i in range(10):
     iteration_start = time.time()
     logger.info("Iteration %s", i)
-    ray.get([f.remote(0) for _ in range(100000)])
+    ray.get([f.remote(0) for _ in range(1000)])
     stage_1_iterations.append(time.time() - iteration_start)
 
 stage_1_time = time.time() - start_time
@@ -82,7 +86,7 @@ for _ in range(5):
     for i in range(20):
         logger.info("Iteration %s. Cumulative time %s seconds", i,
                     time.time() - start_time)
-        x_ids = [f.remote(0, *x_ids) for _ in range(500)]
+        x_ids = [f.remote(0, *x_ids) for _ in range(50)]
     ray.get(x_ids)
     stage_2_iterations.append(time.time() - iteration_start)
     logger.info("Finished after %s seconds.", time.time() - start_time)
@@ -101,7 +105,7 @@ logger.info("Finished stage 3 actor creation in %s seconds.",
 # Submit a bunch of small tasks to each actor. (approximately 1070 seconds)
 start_time = time.time()
 logger.info("Submitting many small actor tasks.")
-for N in [1000, 100000]:
+for N in [1000, 1100]:
     x_ids = []
     for i in range(N):
         x_ids = [a.method.remote(0) for a in actors]

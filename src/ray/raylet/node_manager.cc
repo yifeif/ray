@@ -1248,7 +1248,8 @@ void NodeManager::ProcessRegisterClientRequestMessage(
       RAY_LOG(INFO) << "X-RAY-TRACE message:'WORKER_REGISTERED.' worker_id:"
                     << worker->WorkerId() << " task_id:" << worker->GetAssignedTaskId()
                     << " actor_id:" << worker->GetActorId()
-                    << " job_id:" << worker->GetAssignedJobId();
+                    << " job_id:" << worker->GetAssignedJobId()
+                    << " node_id:" << self_node_id_;
     }
   } else {
     // Register the new driver.
@@ -1268,7 +1269,9 @@ void NodeManager::ProcessRegisterClientRequestMessage(
       RAY_CHECK_OK(gcs_client_->Jobs().AsyncAdd(job_data_ptr, nullptr));
       RAY_LOG(INFO) << "X-RAY-TRACE message:'DRIVER_REGISTERED.' worker_id:"
                     << worker->WorkerId() << " task_id:" << worker->GetAssignedTaskId()
-                    << " job_id:" << worker->GetAssignedJobId();
+                    << " job_id:" << worker->GetAssignedJobId()
+                    << " node_id:" << self_node_id_;
+      ;
     }
   }
 }
@@ -1387,10 +1390,14 @@ void NodeManager::ProcessDisconnectClientMessage(
       gcs_client_->Workers().AsyncReportWorkerFailure(worker_failure_data_ptr, nullptr));
   if (is_worker) {
     RAY_LOG(INFO) << "X-RAY-TRACE message:'WORKER_DEAD.' worker_id:" << worker->WorkerId()
-                  << " job_id:" << worker->GetAssignedJobId();
+                  << " job_id:" << worker->GetAssignedJobId()
+                  << " node_id:" << self_node_id_;
+    ;
   } else if (is_driver) {
     RAY_LOG(INFO) << "X-RAY-TRACE message:'DRIVER_DEAD.' worker_id:" << worker->WorkerId()
-                  << " job_id:" << worker->GetAssignedJobId();
+                  << " job_id:" << worker->GetAssignedJobId()
+                  << " node_id:" << self_node_id_;
+    ;
   }
 
   if (is_worker) {
