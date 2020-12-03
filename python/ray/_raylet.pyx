@@ -388,14 +388,14 @@ cdef execute_task(
                 f" title:{next_title}"
                 f" job_id:{job_id.hex().encode('ascii')}"
                 f" task_id:{task_id.hex().encode('ascii')}"
-                f" actor_id:{core_worker.get_actor_id().hex().encode('ascii')}")
+                f" actor_id:{core_worker.get_actor_id().hex().encode('ascii')}") # noqa 
         else:
             logger.info(
                 f"X-RAY-TRACE message:'ACTOR_TASK_EXECUTED'"
                 f" title:{next_title}"
                 f" job_id:{job_id.hex().encode('ascii')}"
                 f" task_id:{task_id.hex().encode('ascii')}"
-                f" actor_id:{core_worker.get_actor_id().hex().encode('ascii')}")
+                f" actor_id:{core_worker.get_actor_id().hex().encode('ascii')}") # noqa 
         pid = os.getpid()
         worker_name = f"ray_{class_name}_{pid}"
         if c_resources.find(b"object_store_memory") != c_resources.end():
