@@ -1720,18 +1720,18 @@ void NodeManager::HandleRequestWorkerLease(const rpc::RequestWorkerLeaseRequest 
                       << WorkerID::FromBinary(owner_address.worker_id());
         leased_workers_[worker_id] = worker;
       });
-  task.OnSpillbackInstead([this, reply, task_id, send_reply_callback](
-                              const NodeID &spillback_to, const std::string &address,
-                              int port) {
-    RAY_LOG(DEBUG) << "Worker lease request SPILLBACK " << task_id;
-    reply->mutable_retry_at_raylet_address()->set_ip_address(address);
-    reply->mutable_retry_at_raylet_address()->set_port(port);
-    reply->mutable_retry_at_raylet_address()->set_raylet_id(spillback_to.Binary());
-    metrics_num_task_spilled_back_ += 1;
-    RAY_LOG(INFO) << "X-RAY-TRACE message:'SPILLBACK.' from_node_id:" << self_node_id_
-                  << " to_node_id:" << spillback_to << " task_id:" << task_id;
-    send_reply_callback(Status::OK(), nullptr, nullptr);
-  });
+  task.OnSpillbackInstead(
+      [this, reply, task_id, send_reply_callback](const NodeID &spillback_to,
+                                                  const std::string &address, int port) {
+        RAY_LOG(DEBUG) << "Worker lease request SPILLBACK " << task_id;
+        reply->mutable_retry_at_raylet_address()->set_ip_address(address);
+        reply->mutable_retry_at_raylet_address()->set_port(port);
+        reply->mutable_retry_at_raylet_address()->set_raylet_id(spillback_to.Binary());
+        metrics_num_task_spilled_back_ += 1;
+        RAY_LOG(INFO) << "X-RAY-TRACE message:'SPILLBACK.' from_node_id:" << self_node_id_
+                      << " to_node_id:" << spillback_to << " task_id:" << task_id;
+        send_reply_callback(Status::OK(), nullptr, nullptr);
+      });
   task.OnCancellationInstead([reply, task_id, send_reply_callback]() {
     RAY_LOG(DEBUG) << "Task lease request canceled " << task_id;
     reply->set_canceled(true);

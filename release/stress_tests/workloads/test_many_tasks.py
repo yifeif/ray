@@ -19,7 +19,7 @@ head_node_cpus = 4
 num_remote_cpus = num_remote_nodes * head_node_cpus
 
 cluster = Cluster()
-for _ in range(num_remote_cpus + 1):
+for _ in range(num_remote_nodes + 1):
     cluster.add_node(num_cpus=head_node_cpus, num_gpus=1)
 ray.init(address=cluster.address)
 
