@@ -133,7 +133,7 @@ class LogMonitor:
                 job_match = JOB_LOG_PATTERN.match(file_path)
                 if job_match:
                     job_id = job_match.group(2)
-                    worker_pid = job_match.group(3)
+                    worker_pid = int(job_match.group(3))
                 else:
                     job_id = None
                     worker_pid = None

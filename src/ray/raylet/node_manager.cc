@@ -1729,7 +1729,7 @@ void NodeManager::HandleRequestWorkerLease(const rpc::RequestWorkerLeaseRequest 
     reply->mutable_retry_at_raylet_address()->set_raylet_id(spillback_to.Binary());
     metrics_num_task_spilled_back_ += 1;
     RAY_LOG(INFO) << "X-RAY-TRACE message:'SPILLBACK.' from_node_id:" << self_node_id_
-                  << " to_node_id:" << spillback_to.Binary() << " task_id:" << task_id;
+                  << " to_node_id:" << spillback_to << " task_id:" << task_id;
     send_reply_callback(Status::OK(), nullptr, nullptr);
   });
   task.OnCancellationInstead([reply, task_id, send_reply_callback]() {
