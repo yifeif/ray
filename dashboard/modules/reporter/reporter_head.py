@@ -138,6 +138,12 @@ class ReportHead(dashboard_utils.DashboardHeadModule):
                 data = json.loads(ray.utils.decode(data))
                 key = key.decode("utf-8")
                 node_id = key.split(":")[-1]
+                logger.info(
+                    "X-RAY-TRACE message:'STATS'"
+                    f" cpu_percentage:{data['cpu']}"
+                    f" memory:{data['mem'][1] / data['mem'][0]}"
+                    f" node_id:{node_id}")
+
                 DataSource.node_physical_stats[node_id] = data
             except Exception:
                 logger.exception(
